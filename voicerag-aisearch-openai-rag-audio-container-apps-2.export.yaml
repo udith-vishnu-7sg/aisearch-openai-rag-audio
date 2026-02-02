@@ -1,0 +1,545 @@
+# ==============================================================================
+# Workload Definition File (WDF) for VoiceRAG Application - Container Apps
+# ==============================================================================
+# This WDF deploys the VoiceRAG application to Azure Container Apps.
+# The application implements RAG support using voice as the user interface,
+# powered by Azure OpenAI models (gpt-realtime-mini for transcription and 
+# text-to-speech, gpt-5-mini for chat). Uses Azure AI Search for vector 
+# search and retrieval augmented generation.
+# Source: https://github.com/7sg-ai/aisearch-openai-rag-audio
+#
+# The orchestrator will:
+# 1. Git Collector Minion: Clone the git repository (aisearch-openai-rag-audio repo, branch: main)
+#    to NFS at /mnt/nfs/<org_id>/user-<user_id>/<version>/git_repos/clones/
+# 2. Secret Manager Minion: Extract secrets (Azure OpenAI keys, Azure Search keys, etc.) 
+#    from Azure Key Vault and place them in NFS at /mnt/nfs/<org_id>/user-<user_id>/<version>/env/
+# 3. Env Setup Minion: Generate Terraform scripts for Azure resources (if needed)
+#    and store them in NFS at /mnt/nfs/<org_id>/user-<user_id>/<version>/terraform/
+# 4. Deployment Minion: Build Docker images from the locally cloned repository
+#    (Backend service using Dockerfile in ./app directory)
+# 5. Deployment Minion: Push Docker images to Azure Container Registry (ACR)
+# 6. Deployment Minion: Deploy to Azure Container Apps (with automatic environment creation)
+# 7. Deployment Minion: Inject environment variables from NFS env directory
+# 8. Monitoring Minion: Verify application is live and functional
+#
+# Prerequisites:
+# - Azure Key Vault secrets must exist (azure-openai-endpoint, azure-openai-api-key, 
+#   azure-search-endpoint, azure-search-api-key, etc.)
+# - Azure Container Registry (ACR) must exist (will be created if it doesn't)
+# - Azure Container Apps Environment will be created automatically if it doesn't exist
+# - Azure Key Vault and ACR credentials are configured in this WDF (secrets.azureKeyVault and acr sections)
+# - Azure credentials are configured in the TDF (credentials.azure section)
+# - Azure AI Search index must be created and populated with document embeddings
+# - Azure Blob Storage container must contain documents for indexing
+#
+# Deployment Flow:
+# - Dockerfile missing? → FAIL EARLY
+# - Image build failed? → RETRY / SWITCH BUILD STRATEGY
+# - ACR exists? → CREATE
+# - App exists? → UPDATE (new revision)
+# - Health check fails? → ROLLBACK
+# ==============================================================================
+
+apiVersion: wdf.7sg.ai/v1
+kind: WorkloadDefinition
+version: "1.0.0"
+metadata:
+  name: aisearch-openai-rag-audio-container-apps
+  tags:
+    env: production
+    app: voicerag
+    type: api-service
+    framework: fastapi-aiohttp
+    llm: azure-openai
+    voice: realtime-api
+    rag: azure-ai-search
+    platform: container-apps
+  org_id: "7sg-ai"
+  id: "aisearch-openai-rag-audio-container-apps"
+  workload_id: "aisearch-openai-rag-audio-container-apps"
+  version: "1.0.0"
+  description: "VoiceRAG application deployed to Azure Container Apps - implements RAG support in applications using voice as their user interface"
+  author: "udith@7sg.ai"
+  created_at: "2024-11-25T00:00:00Z"
+  updated_at: "2024-11-25T00:00:00Z"
+  status: "active"
+
+workload:
+  type: voicerag-api
+  repo: https://github.com/udith-vishnu-7sg/voice_rag
+  branch: main
+  path: .  # Root of the repository
+  
+  # Repository modifications - required changes to the cloned repository
+  # These modifications must be applied before building the Docker images
+  modifications:
+    description: |
+      The VoiceRAG application is already containerized with Dockerfiles.
+      For production deployment, we may need to ensure:
+      1. Health check endpoints are properly configured
+      2. Environment variables are correctly set
+      3. CORS settings are configured for frontend access
+      4. Dependencies are properly installed
+    required_changes: []
+  
+  # Docker build configuration - Enhanced for Container Apps deployments
+  # The Deployment Minion uses this to build the Docker images
+  build:
+    # Base image for the Docker container
+    base_image: python:3.11-slim
+    # Build context (relative to the cloned repository path)
+    context: ./app
+    # Dockerfile path (relative to build context)
+    dockerfile: Dockerfile  # Dockerfile for backend service in ./app directory
+    
+    # Build optimizations
+    optimization:
+      # Use multi-stage build for smaller final image
+      multi_stage: true
+      # Enable BuildKit for faster builds
+      use_buildkit: true
+      # Cache mount for pip dependencies (faster rebuilds)
+      cache_mounts:
+        - type: cache
+          target: /root/.cache/pip
+          id: pip-cache
+        - type: cache
+          target: /app/.cache
+          id: app-cache
+    
+    # Build arguments
+    build_args:
+      PYTHON_VERSION: "3.11"
+      BUILD_VERSION: "latest"
+    
+    # Exposed ports (application ports)
+    ports:
+      - 8000  # Backend API port (FastAPI/aiohttp)
+    
+    # Build steps
+    steps:
+      # Install system dependencies
+      system_dependencies:
+        - curl  # For health checks
+        - wget  # For downloading data if needed
+      # Install application dependencies
+      install_dependencies: true  # Runs 'pip install -r requirements.txt'
+      # Build the application (if needed)
+      build: false  # Python doesn't require build step
+      # Default command to run the application
+      command:
+        # Priority order for backend service:
+        - python3 -m gunicorn app:create_app -b 0.0.0.0:8000 --worker-class aiohttp.GunicornWebWorker
+        - gunicorn app:create_app -b 0.0.0.0:8000 --worker-class aiohttp.GunicornWebWorker
+        - python -m uvicorn app:app --host 0.0.0.0 --port 8000
+  
+  # Deployment configuration - Azure Container Apps (primary)
+  deploy:
+    azure_container_apps:  # compat-key
+      # Backend Service
+      backend_service:
+        name: uv-voicerag-app  # Container App name
+        image: uvvoiceragacr.azurecr.io/uv-voicerag-app:latest
+        dockerfile: ./app/Dockerfile
+        # Container App specific configuration
+        # Use an existing Container Apps Environment to avoid subscription quota
+        environment: voicerag-containerapp-aca-env
+        identity: "<USER_ASSIGNED_IDENTITY_RESOURCE_ID>"
+        resources:
+          cpu: "1.0"  # CPU cores (can be increased if quota allows)
+          memory: "2Gi"  # Memory in GiB
+        # Ingress configuration for Container Apps
+        ingress:
+          enabled: true
+          external: true  # External ingress (accessible from internet)
+          target_port: 8000
+          transport: auto  # auto, http, http2
+          allow_insecure: false  # Require HTTPS
+        # Scale configuration
+        scale:
+          min_replicas: 1
+          max_replicas: 10
+        # Environment variables will be injected from NFS env directory
+
+  runtime:
+    # Platform: Azure Container Apps
+    platform: azure_container_apps  # Container Apps platform
+    regions:
+      - eastus2  # Deployment regions
+    
+    # Container Apps Environment configuration
+    # Container Apps require an "Environment" resource that hosts multiple container apps
+    container_apps_environment:
+      # Point to an existing environment (subscription is at ACA env quota).
+      name: voicerag-containerapp-aca-env
+      resource_group: rg-voicerag-containerapp
+      location: eastus2
+      # Log Analytics workspace is already associated with the existing environment.
+      # If the environment is missing, AzureDeployer will create one (but that is currently blocked by quota).
+      log_analytics_workspace: null
+      # Environment type
+      workload_profile: Consumption  # Consumption or Dedicated (for better performance)
+      # Network configuration (optional)
+      network:
+        infrastructure_subnet_id: null  # Optional: VNet integration
+        docker_bridge_cidr: null  # Optional: Docker bridge network CIDR
+        platform_reserved_cidr: null  # Optional: Platform reserved CIDR
+        platform_reserved_dns_ip: null  # Optional: Platform reserved DNS IP
+    
+    # Docker image configuration
+    image:
+      repository: uv-voicerag-app
+      tag: latest  # Will be replaced with deployment-specific tag (e.g., <deployment_id> or <git_sha>)
+      # Image tagging strategy
+      tagging:
+        strategy: deployment_id  # deployment_id, git_sha, timestamp, or latest
+        include_latest: true  # Also tag as 'latest' for convenience
+    
+    # Resource requirements - Workload-specific resource needs
+    resources:
+      requests:
+        cpu: "1000m"  # Minimum CPU required (1 core) for backend service
+        memory: "2Gi"  # Minimum memory required (2 GB) for voice processing
+        ephemeral_storage: "5Gi"  # Minimum ephemeral storage for temporary audio files
+      limits:
+        cpu: "2"  # Maximum CPU allowed (2 cores)
+        memory: "4Gi"  # Maximum memory allowed (4 GB) for audio processing
+        ephemeral_storage: "10Gi"  # Maximum ephemeral storage
+    
+    # Health check configuration - Enhanced for Container Apps
+    health:
+      # Liveness probe - indicates if container is running
+      liveness:
+        path: /health
+        port: 8000
+        scheme: HTTP  # HTTP or HTTPS
+        initial_delay_seconds: 30  # Wait 30s before first check
+        period_seconds: 30  # Check every 30s
+        timeout_seconds: 10  # 10s timeout per check
+        failure_threshold: 3  # 3 failures = restart container
+        success_threshold: 1  # 1 success = healthy
+      # Readiness probe - indicates if container is ready to serve traffic
+      readiness:
+        path: /health
+        port: 8000
+        scheme: HTTP
+        initial_delay_seconds: 15  # Wait 15s before first check
+        period_seconds: 10  # Check every 10s
+        timeout_seconds: 5  # 5s timeout per check
+        failure_threshold: 3  # 3 failures = remove from service
+        success_threshold: 1  # 1 success = ready
+      # Startup probe - for slow-starting applications
+      startup:
+        path: /health
+        port: 8000
+        scheme: HTTP
+        initial_delay_seconds: 0  # Start checking immediately
+        period_seconds: 10  # Check every 10s
+        timeout_seconds: 5  # 5s timeout per check
+        failure_threshold: 30  # Allow up to 5 minutes (30 * 10s) for startup
+        success_threshold: 1  # 1 success = started
+    
+    # Environment variables - Application configuration
+    env:
+      # Application-specific environment variables
+      - name: NODE_ENV
+        value: production
+      - name: PYTHONUNBUFFERED
+        value: "1"
+      - name: LOG_LEVEL
+        value: "INFO"
+      - name: PORT
+        value: "8000"
+      - name: API_HOST
+        value: "0.0.0.0"
+      - name: API_TITLE
+        value: "VoiceRAG API"
+      - name: API_VERSION
+        value: "1.0.0"
+      - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
+        value: "gpt-realtime-mini"  # For transcription and text-to-speech
+      - name: AZURE_OPENAI_CHAT_DEPLOYMENT
+        value: "gpt-5-mini"  # For chat completions
+      - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        value: "text-embedding-3-large"  # For embeddings
+      - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
+        value: "alloy"  # Voice choice: echo, alloy, shimmer
+      - name: AZURE_OPENAI_API_VERSION
+        value: "2024-02-15-preview"
+      - name: AZURE_SEARCH_INDEX
+        value: "voicerag-intvect"
+      - name: AZURE_SEARCH_SEMANTIC_CONFIGURATION
+        value: "default"  # Optional: semantic configuration name if using semantic search
+      - name: AZURE_SEARCH_IDENTIFIER_FIELD
+        value: "chunk_id"  # Field name for document identifier
+      - name: AZURE_SEARCH_CONTENT_FIELD
+        value: "chunk"  # Field name for content text
+      - name: AZURE_SEARCH_EMBEDDING_FIELD
+        value: "text_vector"  # Field name for embeddings
+      - name: AZURE_SEARCH_TITLE_FIELD
+        value: "title"  # Field name for document title
+      - name: AZURE_SEARCH_USE_VECTOR_QUERY
+        value: "True"  # Use vector search queries
+      - name: TZ
+        value: "UTC"
+      # Azure service endpoints and keys (will be overridden by secrets)
+      - name: RUNNING_IN_PRODUCTION
+        value: "true"
+      - name: AZURE_OPENAI_ENDPOINT
+        value: "<AZURE_OPENAI_ENDPOINT>"
+      - name: AZURE_CLIENT_ID
+        value: ""
+      - name: AZURE_OPENAI_API_KEY
+        value: ""
+      - name: AZURE_SEARCH_ENDPOINT
+        value: "<AZURE_SEARCH_ENDPOINT>"
+      - name: AZURE_SEARCH_API_KEY
+        value: ""
+    
+    # Autoscaling configuration - Container Apps autoscaling
+    autoscaling:
+      enabled: true
+      min_replicas: 1  # Minimum replicas (for high availability)
+      max_replicas: 10  # Maximum replicas for scaling
+      target_cpu_utilization: 70  # Scale when CPU > 70%
+      target_memory_utilization: 80  # Scale when memory > 80%
+    
+    # Lifecycle hooks
+    lifecycle:
+      pre_stop:
+        # Graceful shutdown hook
+        exec:
+          command: ["/bin/sh", "-c", "sleep 15"]  # Give time for connections to drain
+
+# Secrets configuration - Azure Key Vault
+secrets:
+  provider: azureKeyVault
+  # Azure Key Vault configuration - Secret Manager Minion reads this from WDF
+  azureKeyVault:
+    vault_name: wdf-secret-manager-test  # Your Azure Key Vault name
+    vault_url: https://wdf-secret-manager-test.vault.azure.net/  # Your Azure Key Vault URL  # Your Azure Service Principal Client Secret
+    region: East US  # Your Azure region
+  secretRefs:
+    - name: azure-openai-endpoint
+      injectAs: env
+      envVar: AZURE_OPENAI_ENDPOINT
+    - name: azure-openai-api-key
+      injectAs: env
+      envVar: AZURE_OPENAI_API_KEY
+    - name: azure-search-endpoint
+      injectAs: env
+      envVar: AZURE_SEARCH_ENDPOINT
+    - name: azure-search-api-key
+      injectAs: env
+      envVar: AZURE_SEARCH_API_KEY
+    - name: azure-search-index
+      injectAs: env
+      envVar: AZURE_SEARCH_INDEX
+    - name: azure-storage-account-name
+      injectAs: env
+      envVar: AZURE_STORAGE_ACCOUNT_NAME
+    - name: azure-storage-account-key
+      injectAs: env
+      envVar: AZURE_STORAGE_ACCOUNT_KEY
+    - name: azure-storage-connection-string
+      injectAs: env
+      envVar: AZURE_STORAGE_CONNECTION_STRING
+    - name: azure-storage-container
+      injectAs: env
+      envVar: AZURE_STORAGE_CONTAINER
+    - name: application-insights-instrumentation-key
+      injectAs: env
+      envVar: APPLICATIONINSIGHTS_CONNECTION_STRING
+  # The Secret Manager Minion will fetch these from Azure Key Vault
+  # using the credentials above and place them in NFS env directory:
+  # /mnt/nfs/<org_id>/user-<user_id>/<version>/secrets/<deployment_id>/
+
+# Azure Container Registry (ACR) configuration
+# Deployment Minion reads this from WDF to push Docker images
+# Note: ACR authentication credentials (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
+# must be stored in NFS secrets/.env file at /mnt/nfs/.../secrets/.env
+acr:
+  registry: uvvoiceragacr  # Your ACR registry name (without .azurecr.io)
+  registry_url: uvvoiceragacr.azurecr.io  # Full ACR URL
+  resource_group: rg-voicerag-containerapp  # Resource group for ACR
+  sku: Basic  # ACR SKU: Basic, Standard, Premium
+  # Azure credentials for ACR authentication are read from NFS secrets/.env file:
+  # - AZURE_TENANT_ID
+  # - AZURE_CLIENT_ID
+  # - AZURE_CLIENT_SECRET
+  # These must be placed in the NFS secrets/.env file before deployment
+
+# ==============================================================================
+# MONITORING AND OBSERVABILITY
+# ==============================================================================
+monitoring:
+  # Metrics endpoint (if available)
+  metrics:
+    enabled: true
+    path: /metrics  # Prometheus metrics endpoint
+    port: 8000
+  # Logging configuration
+  logging:
+    level: info  # debug, info, warn, error
+    format: json  # json or text
+    # Log aggregation settings
+    aggregation:
+      enabled: true
+      destination: cloud-logging  # cloud-logging, stdout, or custom
+  # Application Insights (optional)
+  application_insights:
+    enabled: true
+    instrumentation_key_secret: application-insights-instrumentation-key
+
+# ==============================================================================
+# SECURITY CONFIGURATION
+# ==============================================================================
+security:
+  policies:
+    secretsInEnvAllowed: true
+    # Additional security policies
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false  # Set to true if app doesn't need write access (audio processing may need temp files)
+    allowPrivilegeEscalation: false
+    # Network policies
+    network_policy:
+      enabled: true
+      # Allow ingress from specific namespaces or pods
+      ingress:
+        - from:
+          - namespaceSelector:
+              matchLabels:
+                name: monitoring
+          ports:
+          - protocol: TCP
+            port: 8000
+      # Allow egress to specific destinations
+      egress:
+        - to:
+          - namespaceSelector:
+              matchLabels:
+                name: external-services
+          ports:
+          - protocol: TCP
+            port: 443  # HTTPS for Azure OpenAI, Azure AI Search, Azure Storage
+        - to:
+          - namespaceSelector:
+              matchLabels:
+                name: azure-services
+          ports:
+          - protocol: TCP
+            port: 443
+
+# ==============================================================================
+# DEPENDENCIES AND PREREQUISITES
+# ==============================================================================
+dependencies:
+  # External service dependencies
+  services:
+    - name: azure-openai-service
+      type: external
+      required: true
+      description: "Azure OpenAI service with gpt-realtime-mini (for transcription and TTS), gpt-5-mini (for chat), and text-embedding-3-large (for embeddings)"
+    - name: azure-ai-search
+      type: external
+      required: true
+      description: "Azure AI Search service for vector search and RAG retrieval. Standard tier with 1 replica and free semantic search level."
+    - name: azure-blob-storage
+      type: external
+      required: true
+      description: "Azure Blob Storage for storing documents, audio files, and embeddings. Standard tier with ZRS (Zone-redundant storage)."
+    - name: azure-container-apps
+      type: external
+      required: true
+      description: "Azure Container Apps for hosting the application. Consumption plan with 1 CPU core, 2.0 GB RAM."
+    - name: azure-monitor
+      type: external
+      required: false
+      description: "Azure Monitor for application insights and logging. Pay-as-you-go tier."
+  # Infrastructure dependencies
+  infrastructure:
+    - name: azure-container-registry
+      type: container-registry
+      required: true
+      description: "Azure Container Registry for storing Docker images"
+  # Data dependencies
+  data:
+    - name: document-index
+      type: search-index
+      required: true
+      description: "Azure AI Search index containing document embeddings for RAG retrieval. Must be created and populated before deployment."
+      location:
+        type: azure-ai-search
+        index_name: voicerag-index
+    - name: document-storage
+      type: blob-storage
+      required: true
+      description: "Azure Blob Storage container containing source documents for indexing and retrieval"
+      location:
+        type: azure-blob-storage
+        container: content
+
+# ==============================================================================
+# ROLLBACK CONFIGURATION
+# ==============================================================================
+rollback:
+  enabled: true
+  automatic: true
+  triggers:
+    - health_check_failure
+    - performance_degradation
+    - error_rate_threshold
+    - manual_trigger
+  # Rollback strategy
+  strategy:
+    type: immediate  # immediate or gradual
+    keep_previous_replicas: 1  # Keep 1 replica of previous version during rollback
+
+# ==============================================================================
+# PRE-DEPLOYMENT HOOKS
+# ==============================================================================
+# Hooks that run before the main deployment begins.
+# These are used to provision required dependencies that must exist before the app starts.
+hooks:
+  pre_deploy:
+    # Azure OpenAI Model Deployments
+    # These models must be deployed to Azure OpenAI before the application can function.
+    # The Deployment Minion will create these deployments if they don't already exist.
+    azure_openai_models:
+      # Azure OpenAI service name (extracted from endpoint or specified directly)
+      # Can use the endpoint URL and the minion will extract the service name
+      endpoint: "<AZURE_OPENAI_ENDPOINT>"
+      # Resource group containing the Azure OpenAI resource
+      resource_group: "rg-voicerag-aisearch-openai-rag-audio"
+      # Model deployments to create
+      deployments:
+        - name: gpt-realtime-mini
+          model: gpt-realtime-mini
+          sku: GlobalStandard
+          capacity: 1
+          description: "Real-time model for transcription and text-to-speech"
+        - name: gpt-5-mini
+          model: gpt-5-mini
+          sku: GlobalStandard
+          capacity: 1
+          description: "Chat completion model for RAG responses"
+        - name: text-embedding-3-large
+          model: text-embedding-3-large
+          sku: Standard
+          capacity: 30
+          description: "Embedding model for vector search"
+
+# ==============================================================================
+# NOTES
+# ==============================================================================
+# This WDF is specifically configured for Azure Container Apps deployment.
+# The deployment minion will:
+# 1. Check for Dockerfile (fail early if missing)
+# 2. Build Docker image (with retry/switch strategy)
+# 3. Ensure ACR exists (create if needed)
+# 4. Check if Container App exists (update with new revision if exists)
+# 5. Perform health check (rollback if fails)
+#
+# The deployment supports both imperative (az CLI) and declarative (Terraform/Bicep) paths.
+# If Terraform or Bicep files are found in the repository, declarative path will be used.
+# Otherwise, imperative path (az containerapp create/update) will be used.
