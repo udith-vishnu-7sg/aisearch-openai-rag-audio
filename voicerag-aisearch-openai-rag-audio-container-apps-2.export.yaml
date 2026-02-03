@@ -165,7 +165,7 @@ workload:
     # Platform: Azure Container Apps
     platform: azure_container_apps  # Container Apps platform
     regions:
-      - northcentralus  # Deployment regions
+      - eastus2  # Deployment regions
     
     # Container Apps Environment configuration
     # Container Apps require an "Environment" resource that hosts multiple container apps
@@ -173,7 +173,7 @@ workload:
       # Point to an existing environment (subscription is at ACA env quota).
       name: voicerag-containerapp-aca-env
       resource_group: rg-voicerag-containerapp
-      location: northcentralus
+      location: eastus2
       # Log Analytics workspace is already associated with the existing environment.
       # If the environment is missing, AzureDeployer will create one (but that is currently blocked by quota).
       log_analytics_workspace: null
