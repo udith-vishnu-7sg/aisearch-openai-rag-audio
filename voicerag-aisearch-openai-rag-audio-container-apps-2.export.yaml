@@ -173,7 +173,7 @@ workload:
       # Point to an existing environment (subscription is at ACA env quota).
       name: voicerag-containerapp-aca-env
       resource_group: rg-voicerag-containerapp
-      location: eastus2
+      location: northcentralus
       # Log Analytics workspace is already associated with the existing environment.
       # If the environment is missing, AzureDeployer will create one (but that is currently blocked by quota).
       log_analytics_workspace: null
