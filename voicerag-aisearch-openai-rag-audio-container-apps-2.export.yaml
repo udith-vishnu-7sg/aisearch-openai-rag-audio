@@ -165,7 +165,7 @@ workload:
     # Platform: Azure Container Apps
     platform: azure_container_apps  # Container Apps platform
     regions:
-      - eastus2  # Deployment regions
+      - northcentralus  # Deployment regions
     
     # Container Apps Environment configuration
     # Container Apps require an "Environment" resource that hosts multiple container apps
