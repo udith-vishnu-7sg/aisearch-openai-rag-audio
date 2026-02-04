@@ -257,7 +257,7 @@ workload:
       - name: API_VERSION
         value: "1.0.0"
       - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-        value: "gpt-realtime-mini"  # For transcription and text-to-speech
+        value: "gpt-4o-realtime-preview"  # For transcription and text-to-speech
       - name: AZURE_OPENAI_CHAT_DEPLOYMENT
         value: "gpt-5-mini"  # For chat completions
       - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
