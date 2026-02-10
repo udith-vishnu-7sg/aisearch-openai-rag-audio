@@ -1,0 +1,284 @@
+# ==============================================================================
+# Workload Definition File (WDF) for Azure Search OpenAI Demo - Container Apps
+# ==============================================================================
+# IMPORTANT AUTHENTICATION MODEL:
+# This application uses MANAGED IDENTITY (RBAC) authentication - NOT API Keys.
+# All Azure services must have proper RBAC roles assigned to the Container App's identity.
+#
+# CRITICAL REQUIREMENTS:
+# 1. Container App MUST have system-assigned managed identity enabled
+# 2. Azure OpenAI service MUST be in the SAME resource group (for easier RBAC)
+# 3. Azure Search service MUST allow AAD authentication (not apiKeyOnly)
+# 4. Search index MUST have semantic configuration defined
+# ==============================================================================
+
+apiVersion: wdf.7sg.ai/v1
+kind: WorkloadDefinition
+version: "1.0.0"
+metadata:
+  name: azure-search-openai-demo-updated
+  tags:
+    env: production
+    app: azure-search-openai-demo
+    type: api-service
+    framework: fastapi
+    llm: azure-openai
+    rag: azure-ai-search
+    platform: container-apps
+  org_id: "7sg-ai"
+  id: "azure-search-openai-demo-updated"
+  workload_id: "azure-search-openai-demo-updated"
+  version: "1.0.0"
+  description: "Azure Search OpenAI Demo - UPDATED with correct managed identity configuration"
+  author: "udith@7sg.ai"
+  created_at: "2026-01-29T00:00:00Z"
+  updated_at: "2026-01-30T00:00:00Z"
+  status: "active"
+
+workload:
+  type: azure-search-openai-demo-api
+  repo: https://github.com/7sg-ai/azure-search-openai-demo.git
+  branch: main
+  path: .
+  
+  # Repository modifications - required changes to the cloned repository
+  modifications:
+    description: |
+      The Azure Search OpenAI Demo application requires frontend to be built before Docker build.
+      The frontend (React/Vite) must be built first, which outputs to app/backend/static/ directory.
+    required_changes:
+      - type: pre_build
+        description: "Build frontend before Docker build - outputs to app/backend/static/"
+        command: "cd app/frontend && npm install && npm run build"
+        working_dir: "."
+        required: true
+  
+  # Docker build configuration
+  build:
+    base_image: python:3.11-slim
+    context: ./app/backend
+    dockerfile: Dockerfile
+    ports:
+      - 8000
+  
+  # Deployment configuration - Azure Container Apps
+  deploy:
+    azure:
+      region: "eastus2"
+      resource_group: "rg-azure-search-openai-demo"
+    
+    azure_container_apps:
+      backend_service:
+        name: azure-search-openai-demo-app
+        image: azuresearchopenaiacr.azurecr.io/azure-search-openai-demo-app:latest
+        dockerfile: ./app/backend/Dockerfile
+        environment: azure-search-openai-demo-containerapp-aca-env
+        
+        # MANAGED IDENTITY CONFIGURATION (CRITICAL)
+        identity:
+          type: SystemAssigned
+        
+        # RBAC Roles to assign to the managed identity
+        rbac_assignments:
+          - service: azure_openai
+            role: "Cognitive Services OpenAI User"
+            scope: resource
+            description: "Required for chat completions and embeddings API calls"
+          - service: azure_search
+            role: "Search Index Data Contributor"
+            scope: resource
+            description: "Required for reading/writing search index data"
+          - service: azure_search
+            role: "Search Service Contributor"
+            scope: resource
+            description: "Required for search service operations"
+          - service: azure_storage
+            role: "Storage Blob Data Reader"
+            scope: resource
+            description: "Required for reading documents from blob storage"
+        
+        resources:
+          cpu: "1.0"
+          memory: "2Gi"
+        ingress:
+          enabled: true
+          external: true
+          target_port: 8000
+          transport: auto
+          allow_insecure: false
+        scale:
+          min_replicas: 1
+          max_replicas: 10
+
+  runtime:
+    platform: azure_container_apps
+    regions:
+      - eastus2
+    
+    container_apps_environment:
+      name: azure-search-openai-demo-containerapp-aca-env
+      resource_group: rg-azure-search-openai-demo
+      location: eastus2
+    
+    image:
+      repository: azure-search-openai-demo-app
+      tag: latest
+    
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+    
+    health:
+      liveness:
+        path: /health
+        port: 8000
+        initial_delay_seconds: 30
+        period_seconds: 30
+      readiness:
+        path: /health
+        port: 8000
+        initial_delay_seconds: 15
+        period_seconds: 10
+    
+    # Environment variables - UPDATED WITH CORRECT VALUES
+    env:
+      - name: NODE_ENV
+        value: production
+      - name: PYTHONUNBUFFERED
+        value: "1"
+      - name: LOG_LEVEL
+        value: "INFO"
+      - name: PORT
+        value: "8000"
+      - name: RUNNING_IN_PRODUCTION
+        value: "true"
+      
+      # AZURE OPENAI - CORRECT VALUES
+      - name: AZURE_OPENAI_ENDPOINT
+        value: "<AZURE_OPENAI_ENDPOINT>"
+      - name: AZURE_OPENAI_SERVICE
+        value: "azure-search-openai-cog"
+      - name: AZURE_OPENAI_CHAT_DEPLOYMENT
+        value: "gpt-5-mini"
+      - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        value: "text-embedding-3-large"
+      - name: AZURE_OPENAI_API_VERSION
+        value: "2024-02-15-preview"
+      
+      # AZURE SEARCH - CORRECT VALUES
+      - name: AZURE_SEARCH_ENDPOINT
+        value: "<AZURE_SEARCH_ENDPOINT>"
+      - name: AZURE_SEARCH_SERVICE
+        value: "search-azure-openai-demo"
+      - name: AZURE_SEARCH_INDEX
+        value: "azure-search-openai-demo-index"
+      - name: AZURE_SEARCH_SEMANTIC_CONFIGURATION
+        value: "default"
+      - name: AZURE_SEARCH_IDENTIFIER_FIELD
+        value: "id"
+      - name: AZURE_SEARCH_CONTENT_FIELD
+        value: "content"
+      - name: AZURE_SEARCH_EMBEDDING_FIELD
+        value: "embedding"
+      - name: AZURE_SEARCH_TITLE_FIELD
+        value: "title"
+      - name: AZURE_SEARCH_USE_VECTOR_QUERY
+        value: "True"
+      
+      # AZURE STORAGE - REQUIRED FOR DOCUMENT STORAGE
+      - name: AZURE_STORAGE_ACCOUNT
+        value: "stazuresearchopenai"
+      - name: AZURE_STORAGE_CONTAINER
+        value: "content"
+      
+      # AZURE OPENAI MODEL NAMES - ADDITIONAL REQUIRED VARS
+      - name: AZURE_OPENAI_CHATGPT_MODEL
+        value: "gpt-5-mini"
+      - name: AZURE_OPENAI_EMB_MODEL_NAME
+        value: "text-embedding-3-large"
+      - name: AZURE_OPENAI_CHATGPT_DEPLOYMENT
+        value: "gpt-5-mini"
+      - name: AZURE_OPENAI_EMB_DEPLOYMENT
+        value: "text-embedding-3-large"
+
+# ACR configuration
+acr:
+  registry: azuresearchopenaiacr
+  registry_url: azuresearchopenaiacr.azurecr.io
+  resource_group: rg-azure-search-openai-demo
+  sku: Basic
+
+# Pre-deployment hooks
+hooks:
+  pre_deploy:
+    # Azure Storage Account configuration
+    azure_storage_account:
+      name: "stazuresearchopenai"
+      resource_group: "rg-azure-search-openai-demo"
+      location: "eastus2"
+      sku: "Standard_ZRS"
+      containers:
+        - name: "content"
+          public_access: "none"
+    
+    # Azure OpenAI Service configuration
+    azure_openai_service:
+      name: "azure-search-openai-cog"
+      resource_group: "rg-azure-search-openai-demo"
+      location: "eastus2"
+      sku: "S0"
+      kind: "OpenAI"
+      custom_domain: "azure-search-openai-cog"
+    
+    azure_openai_models:
+      endpoint: "<AZURE_OPENAI_ENDPOINT>"
+      resource_group: "rg-azure-search-openai-demo"
+      deployments:
+        - name: gpt-5-mini
+          model: gpt-4o-mini
+          model_version: "2024-07-18"
+          sku: GlobalStandard
+          capacity: 10
+        - name: text-embedding-3-large
+          model: text-embedding-3-large
+          model_version: "1"
+          sku: Standard
+          capacity: 10
+    
+    # Azure Search configuration
+    azure_search_service:
+      name: "search-azure-openai-demo"
+      resource_group: "rg-azure-search-openai-demo"
+      location: "eastus2"
+      sku: "basic"
+      auth_options: "aadOrApiKey"
+      aad_auth_failure_mode: "http401WithBearerChallenge"
+    
+    azure_search_index:
+      name: "azure-search-openai-demo-index"
+      fields:
+        - name: "id"
+          type: "Edm.String"
+          key: true
+        - name: "content"
+          type: "Edm.String"
+          searchable: true
+        - name: "title"
+          type: "Edm.String"
+          searchable: true
+        - name: "embedding"
+          type: "Collection(Edm.Single)"
+          dimensions: 3072
+      semantic:
+        default_configuration: "default"
+        configurations:
+          - name: "default"
+            prioritized_fields:
+              title_field:
+                field_name: "title"
+              prioritized_content_fields:
+                - field_name: "content"
