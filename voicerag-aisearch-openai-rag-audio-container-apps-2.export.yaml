@@ -316,8 +316,8 @@ secrets:
   provider: azureKeyVault
   # Azure Key Vault configuration - Secret Manager Minion reads this from WDF
   azureKeyVault:
-    vault_name: wdf-secret-manager-test  # Your Azure Key Vault name
-    vault_url: https://wdf-secret-manager-test.vault.azure.net/  # Your Azure Key Vault URL  # Your Azure Service Principal Client Secret
+    vault_name: wdf-secret-manager
+    vault_url: https://wdf-secret-manager.vault.azure.net/ # Your Azure Key Vault URL  # Your Azure Service Principal Client Secret
     region: East US  # Your Azure region
   secretRefs:
     - name: azure-openai-endpoint
