@@ -66,7 +66,7 @@ metadata:
 
 workload:
   type: voicerag-api
-  repo: https://github.com/udith-vishnu-7sg/voice_rag
+  repo: https://github.com/udith-vishnu-7sg/aisearch-openai-rag-audio
   branch: main
   path: .  # Root of the repository
   
