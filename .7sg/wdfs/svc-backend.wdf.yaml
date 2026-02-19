@@ -17,18 +17,18 @@ metadata:
     - service
     framework: aiohttp
   org_id: '<TODO: your-org-id>'
-  id: svc-backend-0ff903d7
-  workload_id: svc-backend-0ff903d7
+  id: svc-backend-8de6a270
+  workload_id: svc-backend-8de6a270
   version: 1.0.0
-  description: Python aiohttp web service exposing a realtime WebSocket endpoint, integrating with Azure OpenAI, Azure Search,
-    and optional document sync.
+  description: Core Python service implementing the Realtime voice RAG logic, document synchronization, and Azure credential
+    handling.
   author: '<TODO: author@email>'
-  created_at: '2026-02-19T12:29:31Z'
-  updated_at: '2026-02-19T12:29:31Z'
+  created_at: '2026-02-19T12:38:46Z'
+  updated_at: '2026-02-19T12:38:46Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
-  subsystem_id: sub_003
+  subsystem_id: sub_002
   is_full_app: false
 workload:
   type: aisearch-openai-rag-audio-service
@@ -40,7 +40,7 @@ workload:
     context: ./app/backend
     dockerfile: ./app/Dockerfile
     ports:
-    - 8000
+    - 8765
     steps:
       system_dependencies: []
       install_dependencies: true
@@ -59,7 +59,7 @@ workload:
         ingress:
           enabled: true
           external: true
-          target_port: 8000
+          target_port: 8765
           transport: auto
         scale:
           min_replicas: 1
@@ -67,7 +67,7 @@ workload:
   runtime:
     language: python
     framework: aiohttp
-    entry_point: app/backend/app.py
+    entry_point: app.py
     platform: azure_container_apps
     env:
     - name: AZURE_ENV_NAME
@@ -77,7 +77,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -103,9 +103,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -113,7 +113,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED
@@ -125,13 +125,13 @@ workload:
   health:
     liveness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 60
       period_seconds: 30
     readiness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 30
       period_seconds: 10

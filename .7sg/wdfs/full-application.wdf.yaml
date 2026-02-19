@@ -1,11 +1,11 @@
 # ==============================================================================
 # Workload Definition File (WDF) for Aisearch Openai Rag Audio — Container Apps
 # ==============================================================================
-# The repository implements a micro‑service style RAG audio application. A Dockerfile builds a Vite‑based React frontend a
+# The repository implements a micro‑service architecture for an Azure‑OpenAI Realtime voice RAG application. It consists o
 # Source: https://github.com/udith-vishnu-7sg/aisearch-openai-rag-audio
 #
-# Subsystems: app, frontend, backend, scripts
-# Generated: 2026-02-19 12:28:49
+# Subsystems: app, backend, frontend, scripts
+# Generated: 2026-02-19 12:38:20
 # Generator: Sherpa WDF Generator v1
 #
 # NOTE: Fields marked <TODO: ...> require manual configuration.
@@ -28,13 +28,14 @@ metadata:
   id: aisearch-openai-rag-audio-container-apps
   workload_id: aisearch-openai-rag-audio-container-apps
   version: 1.0.0
-  description: The repository implements a micro‑service style RAG audio application. A Dockerfile builds a Vite‑based React
-    frontend and a Python aiohttp backend that serves realtime audio responses via Azure OpenAI. Supporting shell scripts
-    aid local development. The stack combines TypeScript/React for the UI and Python/Azure SDKs for the backend, orchestrated
-    in a single container exposing port 8000.
+  description: The repository implements a micro‑service architecture for an Azure‑OpenAI Realtime voice RAG application.
+    It consists of a Python aiohttp backend that orchestrates Azure Search, Azure Storage, and OpenAI Realtime APIs, a React/Vite
+    frontend written in TypeScript, and a collection of helper scripts. Docker is used for containerisation (multi‑stage Dockerfile
+    with Node and Python), but no docker‑compose is defined. The codebase includes extensive environment‑variable configuration
+    for Azure services and a background document‑sync component.
   author: '<TODO: author@email>'
-  created_at: '2026-02-19T12:28:32Z'
-  updated_at: '2026-02-19T12:28:32Z'
+  created_at: '2026-02-19T12:38:06Z'
+  updated_at: '2026-02-19T12:38:06Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -52,7 +53,7 @@ workload:
     dockerfile: app/Dockerfile
     build_args: {}
     ports:
-    - 8000
+    - 8765
     steps:
       system_dependencies: []
       install_dependencies: true
@@ -71,29 +72,11 @@ workload:
         ingress:
           enabled: true
           external: true
-          target_port: 8000
+          target_port: 8765
           transport: auto
         scale:
           min_replicas: 1
           max_replicas: 5
-      frontend_frontend:
-        name: aisearch-openai-rag-audio-frontend
-        image: '<TODO: ACR_URL>/aisearch-openai-rag-audio-frontend:latest'
-        dockerfile: ./app/Dockerfile
-        environment: '<TODO: container-apps-environment-name>'
-        resources:
-          cpu: '1.0'
-          memory: 2.0Gi
-        ingress:
-          enabled: true
-          external: true
-          target_port: 8000
-          transport: auto
-        scale:
-          min_replicas: 1
-          max_replicas: 5
-        depends_on:
-        - service_app
       service_backend:
         name: aisearch-openai-rag-audio-backend
         image: '<TODO: ACR_URL>/aisearch-openai-rag-audio-backend:latest'
@@ -105,7 +88,25 @@ workload:
         ingress:
           enabled: true
           external: true
-          target_port: 8000
+          target_port: 8765
+          transport: auto
+        scale:
+          min_replicas: 1
+          max_replicas: 5
+        depends_on:
+        - service_app
+      frontend_frontend:
+        name: aisearch-openai-rag-audio-frontend
+        image: '<TODO: ACR_URL>/aisearch-openai-rag-audio-frontend:latest'
+        dockerfile: ./app/Dockerfile
+        environment: '<TODO: container-apps-environment-name>'
+        resources:
+          cpu: '1.0'
+          memory: 2.0Gi
+        ingress:
+          enabled: true
+          external: true
+          target_port: 8765
           transport: auto
         scale:
           min_replicas: 1
@@ -123,7 +124,7 @@ workload:
         ingress:
           enabled: true
           external: true
-          target_port: 8000
+          target_port: 8765
           transport: auto
         scale:
           min_replicas: 1
@@ -149,7 +150,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -175,9 +176,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -185,7 +186,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: RUNNING_IN_PRODUCTION
@@ -195,13 +196,13 @@ workload:
   health:
     liveness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 60
       period_seconds: 30
     readiness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 30
       period_seconds: 10

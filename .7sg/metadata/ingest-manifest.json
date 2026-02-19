@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "repo_url": "https://github.com/udith-vishnu-7sg/aisearch-openai-rag-audio",
-  "ingest_timestamp": "2026-02-19T12:30:11.770223",
+  "ingest_timestamp": "2026-02-19T12:39:48.768451",
   "generator": "sherpa-ingestion-v1",
   "architecture_type": "microservices",
   "subsystems_found": 4,
@@ -9,8 +9,8 @@
   "wdf_files": [
     "full-application.wdf.yaml",
     "svc-app.wdf.yaml",
-    "fro-frontend.wdf.yaml",
     "svc-backend.wdf.yaml",
+    "fro-frontend.wdf.yaml",
     "svc-scripts.wdf.yaml"
   ],
   "default_scenario": "full-application",

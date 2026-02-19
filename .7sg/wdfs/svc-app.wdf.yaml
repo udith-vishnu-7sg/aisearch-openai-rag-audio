@@ -15,16 +15,16 @@ metadata:
     subsystem: app
     type: !!python/object/apply:orchestrator.minions.git_analysis.schemas.SubsystemType
     - service
-    framework: aiohttp/gunicorn
+    framework: aiohttp / react
   org_id: '<TODO: your-org-id>'
-  id: svc-app-93ecfb81
-  workload_id: svc-app-93ecfb81
+  id: svc-app-86f34b22
+  workload_id: svc-app-86f34b22
   version: 1.0.0
-  description: Docker‑based service that builds the Vite frontend, copies the built assets, and runs the Python aiohttp backend
-    via gunicorn on port 8000.
+  description: Python aiohttp web service that hosts the Realtime OpenAI voice RAG API, integrates Azure Search, Azure Storage,
+    and runs a background document sync task.
   author: '<TODO: author@email>'
-  created_at: '2026-02-19T12:28:55Z'
-  updated_at: '2026-02-19T12:28:55Z'
+  created_at: '2026-02-19T12:38:26Z'
+  updated_at: '2026-02-19T12:38:26Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -40,7 +40,7 @@ workload:
     context: ./app
     dockerfile: ./app/Dockerfile
     ports:
-    - 8000
+    - 8765
     steps:
       system_dependencies: []
       install_dependencies: true
@@ -59,14 +59,14 @@ workload:
         ingress:
           enabled: true
           external: true
-          target_port: 8000
+          target_port: 8765
           transport: auto
         scale:
           min_replicas: 1
           max_replicas: 5
   runtime:
-    language: python
-    framework: aiohttp/gunicorn
+    language: python/typescript
+    framework: aiohttp / react
     entry_point: app/backend/app.py
     platform: azure_container_apps
     env:
@@ -77,7 +77,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -103,9 +103,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -113,7 +113,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED
@@ -125,13 +125,13 @@ workload:
   health:
     liveness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 60
       period_seconds: 30
     readiness:
       path: /health
-      port: 8000
+      port: 8765
       scheme: HTTP
       initial_delay_seconds: 30
       period_seconds: 10
