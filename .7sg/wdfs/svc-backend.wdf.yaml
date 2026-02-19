@@ -17,13 +17,14 @@ metadata:
     - service
     framework: aiohttp
   org_id: '<TODO: your-org-id>'
-  id: svc-backend-56c01f67
-  workload_id: svc-backend-56c01f67
+  id: svc-backend-0ff903d7
+  workload_id: svc-backend-0ff903d7
   version: 1.0.0
-  description: Core backend library containing the aiohttp application, RAG tools, and document sync utilities.
+  description: Python aiohttp web service exposing a realtime WebSocket endpoint, integrating with Azure OpenAI, Azure Search,
+    and optional document sync.
   author: '<TODO: author@email>'
-  created_at: '2026-02-19T12:19:45Z'
-  updated_at: '2026-02-19T12:19:45Z'
+  created_at: '2026-02-19T12:29:31Z'
+  updated_at: '2026-02-19T12:29:31Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -76,7 +77,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: ''
+      value: gpt-realtime-mini
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -102,9 +103,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: ''
+      value: 'true'
     - name: AZURE_STORAGE_CONTAINER
-      value: ''
+      value: documents
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -112,7 +113,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: ''
+      value: '300'
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED

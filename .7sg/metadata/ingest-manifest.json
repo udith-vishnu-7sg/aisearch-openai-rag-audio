@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "repo_url": "https://github.com/udith-vishnu-7sg/aisearch-openai-rag-audio",
-  "ingest_timestamp": "2026-02-19T12:20:25.918041",
+  "ingest_timestamp": "2026-02-19T12:30:11.770223",
   "generator": "sherpa-ingestion-v1",
   "architecture_type": "microservices",
   "subsystems_found": 4,

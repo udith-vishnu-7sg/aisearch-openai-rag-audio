@@ -15,16 +15,16 @@ metadata:
     subsystem: app
     type: !!python/object/apply:orchestrator.minions.git_analysis.schemas.SubsystemType
     - service
-    framework: aiohttp
+    framework: aiohttp/gunicorn
   org_id: '<TODO: your-org-id>'
-  id: svc-app-a95a14bb
-  workload_id: svc-app-a95a14bb
+  id: svc-app-93ecfb81
+  workload_id: svc-app-93ecfb81
   version: 1.0.0
-  description: Python aiohttp service that hosts a realtime voice RAG backend, integrates with Azure OpenAI, Azure Search,
-    and optional Azure Storage document sync.
+  description: Docker‑based service that builds the Vite frontend, copies the built assets, and runs the Python aiohttp backend
+    via gunicorn on port 8000.
   author: '<TODO: author@email>'
-  created_at: '2026-02-19T12:19:02Z'
-  updated_at: '2026-02-19T12:19:02Z'
+  created_at: '2026-02-19T12:28:55Z'
+  updated_at: '2026-02-19T12:28:55Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -66,7 +66,7 @@ workload:
           max_replicas: 5
   runtime:
     language: python
-    framework: aiohttp
+    framework: aiohttp/gunicorn
     entry_point: app/backend/app.py
     platform: azure_container_apps
     env:
@@ -77,7 +77,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: ''
+      value: gpt-realtime-mini
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -103,9 +103,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: ''
+      value: 'true'
     - name: AZURE_STORAGE_CONTAINER
-      value: ''
+      value: documents
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -113,7 +113,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: ''
+      value: '300'
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED
