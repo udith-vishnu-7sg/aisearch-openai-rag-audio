@@ -1,11 +1,11 @@
 # ==============================================================================
 # Workload Definition File (WDF) for Aisearch Openai Rag Audio — Container Apps
 # ==============================================================================
-# The repository implements a microservices-style RAG audio application with a FastAPI Python backend and a Vite‑React Typ
+# The repository is a microservices‑style monorepo that provides a voice‑enabled Retrieval‑Augmented Generation (RAG) appl
 # Source: https://github.com/udith-vishnu-7sg/aisearch-openai-rag-audio
 #
 # Subsystems: app, frontend, backend, scripts
-# Generated: 2026-02-18 07:23:32
+# Generated: 2026-02-19 12:18:55
 # Generator: Sherpa WDF Generator v1
 #
 # NOTE: Fields marked <TODO: ...> require manual configuration.
@@ -22,18 +22,20 @@ metadata:
     env: production
     app: aisearch-openai-rag-audio
     type: fullstack
-    framework: fastapi-react
+    framework: aiohttp-react-tailwindcss-radix-ui
     platform: container-apps
   org_id: '<TODO: your-org-id>'
   id: aisearch-openai-rag-audio-container-apps
   workload_id: aisearch-openai-rag-audio-container-apps
   version: 1.0.0
-  description: The repository implements a microservices-style RAG audio application with a FastAPI Python backend and a Vite‑React
-    TypeScript frontend, containerized via a multi‑stage Dockerfile. The backend integrates Azure Search, OpenAI, and various
-    Azure services, while the frontend provides a modern UI using React, Tailwind, and Radix UI components.
+  description: The repository is a microservices‑style monorepo that provides a voice‑enabled Retrieval‑Augmented Generation
+    (RAG) application. It consists of a Python aiohttp backend exposing a realtime WebSocket endpoint and optional document
+    sync, a React/Vite frontend UI, and supporting scripts. The Dockerfile builds the frontend with Node, then serves the
+    backend with Python and gunicorn on port 8000. The stack heavily leverages Azure services (OpenAI, Search, Storage) and
+    includes a rich set of Python and TypeScript dependencies.
   author: '<TODO: author@email>'
-  created_at: '2026-02-18T07:23:11Z'
-  updated_at: '2026-02-18T07:23:11Z'
+  created_at: '2026-02-19T12:18:40Z'
+  updated_at: '2026-02-19T12:18:40Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -148,7 +150,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -174,9 +176,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -184,7 +186,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: RUNNING_IN_PRODUCTION

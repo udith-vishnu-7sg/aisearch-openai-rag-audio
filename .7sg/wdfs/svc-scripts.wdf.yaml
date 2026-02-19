@@ -16,13 +16,13 @@ metadata:
     type: !!python/object/apply:orchestrator.minions.git_analysis.schemas.SubsystemType
     - service
   org_id: '<TODO: your-org-id>'
-  id: svc-scripts-12310bd8
-  workload_id: svc-scripts-12310bd8
+  id: svc-scripts-1d40ef3a
+  workload_id: svc-scripts-1d40ef3a
   version: 1.0.0
-  description: Utility scripts for deployment, model setup, and environment configuration.
+  description: Utility scripts for deployment, model loading, environment setup, and data generation.
   author: '<TODO: author@email>'
-  created_at: '2026-02-18T07:24:44Z'
-  updated_at: '2026-02-18T07:24:44Z'
+  created_at: '2026-02-19T12:20:05Z'
+  updated_at: '2026-02-19T12:20:05Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -63,9 +63,9 @@ workload:
           min_replicas: 1
           max_replicas: 5
   runtime:
-    language: python
+    language: python/shell
     framework: ''
-    entry_point: scripts/start.sh
+    entry_point: scripts/start.sh (or deploy_models.py)
     platform: azure_container_apps
     env:
     - name: AZURE_ENV_NAME
@@ -75,7 +75,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -101,9 +101,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -111,7 +111,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED

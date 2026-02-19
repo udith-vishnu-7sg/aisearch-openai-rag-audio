@@ -17,13 +17,14 @@ metadata:
     - frontend
     framework: react
   org_id: '<TODO: your-org-id>'
-  id: fro-frontend-51c03314
-  workload_id: fro-frontend-51c03314
+  id: fro-frontend-e2be5b38
+  workload_id: fro-frontend-e2be5b38
   version: 1.0.0
-  description: React UI built with Vite, Tailwind CSS, and Radix UI components.
+  description: React + Vite UI that communicates with the backend via WebSocket and REST, built with Tailwind CSS and Radix
+    UI components.
   author: '<TODO: author@email>'
-  created_at: '2026-02-18T07:23:58Z'
-  updated_at: '2026-02-18T07:23:58Z'
+  created_at: '2026-02-19T12:19:24Z'
+  updated_at: '2026-02-19T12:19:24Z'
   status: draft
   generated: true
   generator: sherpa-wdf-generator-v1
@@ -66,7 +67,7 @@ workload:
   runtime:
     language: typescript
     framework: react
-    entry_point: app/frontend/src/index.tsx
+    entry_point: app/frontend/src/main.tsx (via Vite dev server)
     platform: azure_container_apps
     env:
     - name: AZURE_ENV_NAME
@@ -76,7 +77,7 @@ workload:
     - name: AZURE_OPENAI_ENDPOINT
       value: ''
     - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-      value: gpt-realtime-mini
+      value: ''
     - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
       value: ''
     - name: AZURE_RESOURCE_GROUP
@@ -102,9 +103,9 @@ workload:
     - name: AZURE_SEARCH_TITLE_FIELD
       value: ''
     - name: AZURE_SEARCH_USE_VECTOR_QUERY
-      value: 'true'
+      value: ''
     - name: AZURE_STORAGE_CONTAINER
-      value: documents
+      value: ''
     - name: AZURE_STORAGE_ENDPOINT
       value: ''
     - name: AZURE_SUBSCRIPTION_ID
@@ -112,7 +113,7 @@ workload:
     - name: AZURE_TENANT_ID
       value: ''
     - name: DOCUMENT_SYNC_INTERVAL_SECONDS
-      value: '300'
+      value: ''
     - name: PYTHONDONTWRITEBYTECODE
       value: ''
     - name: PYTHONUNBUFFERED
