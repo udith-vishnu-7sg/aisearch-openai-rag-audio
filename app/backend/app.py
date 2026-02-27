@@ -8,6 +8,18 @@ from azure.core.credentials import AzureKeyCredential
 from azure.identity import AzureDeveloperCliCredential, DefaultAzureCredential
 from dotenv import load_dotenv
 
+if not os.environ.get("RUNNING_IN_PRODUCTION"):
+    load_dotenv()
+
+for env_key, dotenv_key in [
+    ("LANGFUSE_SECRET_KEY", "LANGFUSE_SECRET_KEY"),
+    ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_PUBLIC_KEY"),
+    ("LANGFUSE_HOST", "LANGFUSE_HOST"),
+]:
+    val = os.environ.get(dotenv_key)
+    if val:
+        os.environ.setdefault(env_key, val)
+
 from document_sync import DocumentSync
 from ragtools import attach_rag_tools
 from rtmt import RTMiddleTier
@@ -20,11 +32,10 @@ logger = logging.getLogger("voicerag")
 
 async def create_app():
     logger.info("[App] Initializing application...")
-    if not os.environ.get("RUNNING_IN_PRODUCTION"):
-        logger.info("[App] Running in development mode, loading from .env file")
-        load_dotenv()
-    else:
+    if os.environ.get("RUNNING_IN_PRODUCTION"):
         logger.info("[App] Running in production mode")
+    else:
+        logger.info("[App] Running in development mode")
 
     llm_key = os.environ.get("AZURE_OPENAI_API_KEY")
     search_key = os.environ.get("AZURE_SEARCH_API_KEY")

@@ -8,7 +8,7 @@ import aiohttp
 from aiohttp import web
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from openai import AsyncAzureOpenAI
+from langfuse.openai import AsyncAzureOpenAI
 
 logger = logging.getLogger("voicerag")
 

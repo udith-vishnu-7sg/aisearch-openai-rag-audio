@@ -7,3 +7,4 @@ azure-storage-blob==12.23.1
 azure-core>=1.29.0
 gunicorn
 rich
+langfuse>=2.0.0
