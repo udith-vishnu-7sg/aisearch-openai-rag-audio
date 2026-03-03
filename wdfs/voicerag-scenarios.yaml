@@ -175,7 +175,7 @@ scenarios:
       target:
         provider: azure
         region: eastus2
-        tdfRef: azure-east
+        tdfRef: voicerag-azure-east
         cluster: voicerag-containerapp-aca-env
         namespace: voicerag
       identityRef: azure-managed-identity://voicerag
