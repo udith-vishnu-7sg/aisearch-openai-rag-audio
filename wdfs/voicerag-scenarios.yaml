@@ -3,7 +3,7 @@ kind: WorkloadDefinition
 metadata:
   name: voicerag-scenarios
   description: VoiceRAG application with two scenarios - native (gpt-realtime-mini
-    + gpt-5.2-chat) and alternate (gpt-realtime-mini + gpt-4.1-mini) on Azure Container Apps.
+    + gpt-4.1-mini) and alternate (gpt-realtime-mini + gpt-4.1-nano) on Azure Container Apps.
   tags:
     env: prod
 security:
@@ -95,110 +95,13 @@ dataSources:
   outputs: []
 scenarios:
   native:
-    description: 'Azure Container Apps with gpt-realtime-mini + gpt-5.2-chat: standard
+    description: 'Azure Container Apps with gpt-realtime-mini + gpt-4.1-mini: standard
       VoiceRAG deployment using Azure OpenAI for real-time voice interaction and RAG
       retrieval via Azure AI Search.'
     topology:
       components:
       - &backend
         name: voicerag-backend
-        role: api
-        runtime:
-          platform: container-apps
-          regions:
-          - eastus2
-          image:
-            registry: uvvoiceragacr.azurecr.io
-            repository: uv-voicerag-app
-            tag: latest
-          env:
-          - name: API_HOST
-            value: 0.0.0.0
-          - name: PORT
-            value: '8000'
-          - name: LOG_LEVEL
-            value: INFO
-          - name: PYTHONUNBUFFERED
-            value: '1'
-          - name: RUNNING_IN_PRODUCTION
-            value: 'true'
-          - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
-            value: gpt-realtime-mini
-          - name: AZURE_OPENAI_CHAT_DEPLOYMENT
-            value: gpt-5.2-chat
-          - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
-            value: text-embedding-3-large
-          - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
-            value: alloy
-          - name: AZURE_OPENAI_API_VERSION
-            value: 2025-04-01-preview
-          - name: AZURE_SEARCH_SEMANTIC_CONFIGURATION
-            value: default
-          - name: AZURE_SEARCH_IDENTIFIER_FIELD
-            value: chunk_id
-          - name: AZURE_SEARCH_CONTENT_FIELD
-            value: chunk
-          - name: AZURE_SEARCH_EMBEDDING_FIELD
-            value: text_vector
-          - name: AZURE_SEARCH_TITLE_FIELD
-            value: title
-          - name: AZURE_SEARCH_USE_VECTOR_QUERY
-            value: 'True'
-          envFromSecretRefs:
-          - voicerag-openai-endpoint
-          - voicerag-openai-api-key
-          - azure-search-endpoint
-          - azure-search-api-key
-          - azure-search-index
-          - azure-storage-account-name
-          - azure-storage-account-key
-          - azure-storage-container
-          - azure-storage-connection-string
-          - application-insights-instrumentation-key
-          resources:
-            cpu: '1'
-            memory: 2Gi
-          autoscaling:
-            minReplicas: 1
-            maxReplicas: 10
-            policy:
-              metric: cpu
-              target: 70
-        endpoints:
-        - name: http
-          port: 8000
-          exposure: public
-          protocol: http
-          path: /
-    deployments:
-    - name: azure-container-apps-realtime-mini
-      target:
-        provider: azure
-        region: eastus2
-        tdfRef: voicerag-azure-east
-        cluster: voicerag-containerapp-aca-env
-        namespace: voicerag
-      identityRef: azure-managed-identity://voicerag
-      secretStores:
-        primary: wdf-secret-manager
-      components:
-      - voicerag-backend
-      overrides:
-        components:
-          voicerag-backend:
-            runtime:
-              image:
-                registry: uvvoiceragacr.azurecr.io
-                repository: uv-voicerag-app
-                tag: latest
-  alternates:
-  - name: azure-container-apps-gpt4-mini
-    description: 'Same Azure Container Apps setup but using gpt-realtime-mini + gpt-4.1-mini
-      models instead of gpt-realtime-mini + gpt-5.2-chat. Compares performance with
-      a lighter chat model while keeping the same realtime voice pipeline.'
-    topology:
-      components:
-      - name: voicerag-backend
         role: api
         runtime:
           platform: container-apps
@@ -268,6 +171,103 @@ scenarios:
           protocol: http
           path: /
     deployments:
+    - name: azure-container-apps-realtime-mini
+      target:
+        provider: azure
+        region: eastus2
+        tdfRef: voicerag-azure-east
+        cluster: voicerag-containerapp-aca-env
+        namespace: voicerag
+      identityRef: azure-managed-identity://voicerag
+      secretStores:
+        primary: wdf-secret-manager
+      components:
+      - voicerag-backend
+      overrides:
+        components:
+          voicerag-backend:
+            runtime:
+              image:
+                registry: uvvoiceragacr.azurecr.io
+                repository: uv-voicerag-app
+                tag: latest
+  alternates:
+  - name: azure-container-apps-gpt4-mini
+    description: 'Same Azure Container Apps setup but using gpt-realtime-mini + gpt-4.1-nano
+      models instead of gpt-realtime-mini + gpt-4.1-mini. Compares performance with
+      a lighter chat model while keeping the same realtime voice pipeline.'
+    topology:
+      components:
+      - name: voicerag-backend
+        role: api
+        runtime:
+          platform: container-apps
+          regions:
+          - eastus2
+          image:
+            registry: uvvoiceragacr.azurecr.io
+            repository: uv-voicerag-app
+            tag: latest
+          env:
+          - name: API_HOST
+            value: 0.0.0.0
+          - name: PORT
+            value: '8000'
+          - name: LOG_LEVEL
+            value: INFO
+          - name: PYTHONUNBUFFERED
+            value: '1'
+          - name: RUNNING_IN_PRODUCTION
+            value: 'true'
+          - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
+            value: gpt-realtime-mini
+          - name: AZURE_OPENAI_CHAT_DEPLOYMENT
+            value: gpt-4.1-nano
+          - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+            value: text-embedding-3-large
+          - name: AZURE_OPENAI_REALTIME_VOICE_CHOICE
+            value: alloy
+          - name: AZURE_OPENAI_API_VERSION
+            value: 2025-04-01-preview
+          - name: AZURE_SEARCH_SEMANTIC_CONFIGURATION
+            value: default
+          - name: AZURE_SEARCH_IDENTIFIER_FIELD
+            value: chunk_id
+          - name: AZURE_SEARCH_CONTENT_FIELD
+            value: chunk
+          - name: AZURE_SEARCH_EMBEDDING_FIELD
+            value: text_vector
+          - name: AZURE_SEARCH_TITLE_FIELD
+            value: title
+          - name: AZURE_SEARCH_USE_VECTOR_QUERY
+            value: 'True'
+          envFromSecretRefs:
+          - voicerag-openai-endpoint
+          - voicerag-openai-api-key
+          - azure-search-endpoint
+          - azure-search-api-key
+          - azure-search-index
+          - azure-storage-account-name
+          - azure-storage-account-key
+          - azure-storage-container
+          - azure-storage-connection-string
+          - application-insights-instrumentation-key
+          resources:
+            cpu: '1'
+            memory: 2Gi
+          autoscaling:
+            minReplicas: 1
+            maxReplicas: 10
+            policy:
+              metric: cpu
+              target: 70
+        endpoints:
+        - name: http
+          port: 8000
+          exposure: public
+          protocol: http
+          path: /
+    deployments:
     - name: azure-container-apps-gpt4-mini
       target:
         provider: azure
@@ -292,6 +292,6 @@ scenarios:
               - name: AZURE_OPENAI_REALTIME_DEPLOYMENT
                 value: gpt-realtime-mini
               - name: AZURE_OPENAI_CHAT_DEPLOYMENT
-                value: gpt-4.1-mini
+                value: gpt-4.1-nano
               - name: AZURE_OPENAI_API_VERSION
                 value: 2025-04-01-preview
