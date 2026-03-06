@@ -108,7 +108,7 @@ scenarios:
           regions:
           - eastus2
           image:
-            registry: uvvoiceragacr.azurecr.io
+            registry: uvvoiceragtestacr.azurecr.io
             repository: uv-voicerag-app
             tag: latest
           env:
@@ -188,7 +188,7 @@ scenarios:
           voicerag-backend:
             runtime:
               image:
-                registry: uvvoiceragacr.azurecr.io
+                registry: uvvoiceragtestacr.azurecr.io
                 repository: uv-voicerag-app
                 tag: latest
   alternates:
@@ -205,7 +205,7 @@ scenarios:
           regions:
           - eastus2
           image:
-            registry: uvvoiceragacr.azurecr.io
+            registry: uvvoiceragtestacr.azurecr.io
             repository: uv-voicerag-app
             tag: latest
           env:
@@ -285,7 +285,7 @@ scenarios:
           voicerag-backend:
             runtime:
               image:
-                registry: uvvoiceragacr.azurecr.io
+                registry: uvvoiceragtestacr.azurecr.io
                 repository: uv-voicerag-app
                 tag: latest
               env:
