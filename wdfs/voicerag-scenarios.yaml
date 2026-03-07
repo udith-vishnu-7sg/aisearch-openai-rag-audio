@@ -84,6 +84,10 @@ secrets:
       provider: azure-keyvault
       key: application-insights-instrumentation-key
       vaultUrl: https://wdf-secret-manager.vault.azure.net/
+source:
+  repo: https://github.com/udith-vishnu-7sg/voice_rag
+  branch: main
+  path: .
 dataSources:
   inputs:
   - name: openai-realtime-endpoint
@@ -93,6 +97,19 @@ dataSources:
   - name: ai-search-index
     dsdfRef: dsdf/ai-search-index.dsdf.yaml
   outputs: []
+modifications:
+  description: |
+    The VoiceRAG application Dockerfile uses a development CMD (python app.py).
+    For production deployment on Container Apps, the CMD must use gunicorn with
+    the aiohttp worker for proper async handling and the correct bind address.
+  required_changes:
+  - type: update_file
+    path: app/Dockerfile
+    description: Fix CMD for production deployment with gunicorn aiohttp worker
+    changes:
+    - find: 'CMD ["python", "app.py"]'
+      replace: 'CMD ["python3", "-m", "gunicorn", "app:create_app", "-b", "0.0.0.0:8000",
+        "--worker-class", "aiohttp.GunicornWebWorker"]'
 scenarios:
   native:
     description: 'Azure Container Apps with gpt-realtime-mini + gpt-4.1-mini: standard
@@ -107,6 +124,7 @@ scenarios:
           platform: container-apps
           regions:
           - eastus2
+          dockerfile: app/Dockerfile
           image:
             registry: uvvoiceragtestacr.azurecr.io
             repository: uv-voicerag-app
@@ -204,6 +222,7 @@ scenarios:
           platform: container-apps
           regions:
           - eastus2
+          dockerfile: app/Dockerfile
           image:
             registry: uvvoiceragtestacr.azurecr.io
             repository: uv-voicerag-app
